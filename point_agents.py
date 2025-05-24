@@ -44,10 +44,10 @@ class PointCommander(PointAgent):
         for agent in self.followers:
             agent.fall_in(dt)
 
-
+# Follower agent
 class PointFollower(PointAgent):
 
-    def __init__(self, commander, rel_pos, P=15., I=0., D=1., init_vel=[0., 0., 0.], mass=1.):
+    def __init__(self, commander, rel_pos, P=15., I=0., D=3., init_vel=[0., 0., 0.], mass=1.):
         # Initialize
         self.commander = commander
         self.target_rel_pos = np.array(rel_pos).flatten()
@@ -57,6 +57,7 @@ class PointFollower(PointAgent):
         self.P = P
         self.I = I
         self.D = D
+        # Initialize integrator
         self.integrator = 0.
 
     def distance_to_leader(self):
@@ -65,8 +66,18 @@ class PointFollower(PointAgent):
     def relative_error(self):
         return self.target_rel_pos - self.distance_to_leader()
 
-    def fall_in(self, dt):
+    def relative_vel_error(self):
+        return self.commander.vel - self.vel
+
+    # Calculate the force using PID control
+    def force_pid(self):
         err = self.relative_error()
+        vel_err = self.relative_vel_error()
         self.integrator += err
-        F = self.P * err + self.I * self.integrator
+        F = self.P * err + self.I * self.integrator + self.D * vel_err
+        return F
+
+    # Follow the commander
+    def fall_in(self, dt):
+        F = self.force_pid()
         self.propagate(dt, F)

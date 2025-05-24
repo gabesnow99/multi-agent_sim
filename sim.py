@@ -2,8 +2,8 @@ import cv2
 
 from point_agents import *
 
-al = PointCommander(init_vel=[.4, -.3, 0])
-al.generate_circle_of_followers(6)
+al = PointCommander(init_vel=.2*np.array([-1.1, .5, 0]))
+al.generate_circle_of_followers(10)
 
 dt = .01
 tf = 15
@@ -29,6 +29,7 @@ def cv_plot_agents(commander):
     cv2.circle(img, pos_to_pixels(commander.pos[0], commander.pos[1]), 6, red, -1)
     for agent in commander.followers:
         cv2.circle(img, pos_to_pixels(agent.pos[0], agent.pos[1]), 4, blue, -1)
+        cv2.circle(img, pos_to_pixels(commander.pos[0] + agent.target_rel_pos[0], commander.pos[1] + agent.target_rel_pos[1]), 2, red, -1)
     cv2.imshow('Agents', img)
 
 for frame in range(n):
