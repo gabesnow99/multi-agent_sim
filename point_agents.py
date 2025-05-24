@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 # Super class of point agents
 class PointAgent:
@@ -18,6 +18,12 @@ class PointAgent:
     def propagate(self, dt, F=[0., 0., 0.]):
         F = np.array(F).flatten()
         self.vel += dt * F / self.mass
+        self.pos += dt * self.vel
+
+    # Add a random amount to the velocity
+    def meander(self, dt, max=.1):
+        self.vel[0] += random.uniform(-max, max)
+        self.vel[1] += random.uniform(-max, max)
         self.pos += dt * self.vel
 
 # Commander agent
@@ -43,6 +49,13 @@ class PointCommander(PointAgent):
         self.propagate(dt, F)
         for agent in self.followers:
             agent.fall_in(dt)
+
+    # Meanders the commander as and calls the followers to follow
+    def meander_lead(self, dt, rand_max=.1):
+        self.meander(dt, rand_max)
+        for agent in self.followers:
+            agent.fall_in(dt)
+
 
 # Follower agent
 class PointFollower(PointAgent):

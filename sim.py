@@ -2,7 +2,7 @@ import cv2
 
 from point_agents import *
 
-al = PointCommander(init_vel=.2*np.array([-1.1, .5, 0]))
+al = PointCommander()
 al.generate_circle_of_followers(10)
 
 dt = .01
@@ -36,9 +36,11 @@ for frame in range(n):
     cv_plot_agents(al)
 
     if frame * dt < 1:
-        al.propagate(dt)
+        al.meander(dt)
+        for agent in al.followers:
+            agent.meander(dt, max=.05)
     else:
-        al.forward_march(dt)
+        al.meander_lead(dt)
 
     if cv2.waitKey(int(1000 * dt)) & 0xFF == ord('q'):
         break
