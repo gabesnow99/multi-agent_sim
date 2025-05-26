@@ -35,7 +35,7 @@ class UnicycleAgent:
         self.heading = self.wrap(self.heading + dt * self.heading_dot)
 
     # Add a random amount to the velocities
-    def meander(self, dt, v_max=.1, w_max=.01):
+    def meander(self, dt, v_max=.1, w_max=.03):
         self.vel += random.uniform(-v_max, v_max)
         self.heading_dot += random.uniform(-w_max, w_max)
         self.propagate(dt)
@@ -46,3 +46,4 @@ class UnicycleAgent:
             theta -= 2 * np.pi
         while theta < np.pi:
             theta += 2 * np.pi
+        return theta
