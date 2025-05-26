@@ -4,17 +4,24 @@ import random
 # Super class of point agents
 class PointAgent:
 
+    '''
+    self.pos (1x3 Array):   position (m) as [x, y, z]
+    self.vel (1x3 Array):   velocity (m/s) as [x_dot, y_dot, z_dot]
+    '''
+
     def __init__(self, init_pos=[0., 0., 0.], init_vel=[0., 0., 0.], mass=1.):
         self.pos = np.array(init_pos).flatten()
         self.vel = np.array(init_vel).flatten()
         self.mass = mass
 
+    # Manually set the state
     def set_state(self, pos=None, vel=None):
         if pos:
             self.pos = pos
         if vel:
             self.vel = vel
 
+    # Move forward a timestep
     def propagate(self, dt, F=[0., 0., 0.]):
         F = np.array(F).flatten()
         self.vel += dt * F / self.mass
@@ -24,7 +31,7 @@ class PointAgent:
     def meander(self, dt, max=.1):
         self.vel[0] += random.uniform(-max, max)
         self.vel[1] += random.uniform(-max, max)
-        self.pos += dt * self.vel
+        self.propagate(dt)
 
 # Commander agent
 class PointCommander(PointAgent):
@@ -55,7 +62,6 @@ class PointCommander(PointAgent):
         self.meander(dt, rand_max)
         for agent in self.followers:
             agent.fall_in(dt)
-
 
 # Follower agent
 class PointFollower(PointAgent):
