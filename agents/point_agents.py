@@ -16,9 +16,9 @@ class PointAgent:
 
     # Manually set the state
     def set_state(self, pos=None, vel=None):
-        if pos:
+        if pos != None:
             self.pos = pos
-        if vel:
+        if vel != None:
             self.vel = vel
 
     # Move forward a timestep
@@ -49,7 +49,7 @@ class PointCommander(PointAgent):
         n = int(n)
         for ii in range(n):
             th = 2 * np.pi * ii / n
-            self.create_follower(np.array([np.cos(th), np.sin(th), 0.]))
+            self.create_follower(r * np.array([np.cos(th), np.sin(th), 0.]))
 
     # Marches the commander as well as all followers
     def forward_march(self, dt, F=[0., 0., 0.]):
