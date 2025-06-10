@@ -96,31 +96,43 @@ class UnicycleFollower(UnicycleAgent):
         # Initialize integrator
         # TODO
 
-    # Relative error dotted with the desired direction
-    def relative_pos_error_dotted(self):
-        current_direction = np.array([np.cos(self.heading), np.sin(self.heading)])
-        relative_error = (self.target_rel_pos - self.pos + self.commander.pos)
-        return np.dot(relative_error, current_direction)
-
-    def relative_vel_error_dotted(self):
-        current_direction = np.array([np.cos(self.heading), np.sin(self.heading)])
-        relative_error = (self.commander.vel - self.vel)
-        return np.dot(relative_error, current_direction)
+    def direction_to_location(self):
+        relative_error = self.relative_error()
+        return np.arctan2(relative_error[1], relative_error[0])
 
     def relative_heading_error(self):
-        return self.wrap(self.commander.heading - self.heading)
+        return self.wrap(self.direction_to_location() - self.heading)
 
     def relative_heading_dot_error(self):
         return self.commander.heading_dot - self.heading_dot
 
+    def relative_error(self):
+        return self.target_rel_pos - self.pos + self.commander.pos
+
+    def relative_velocity(self):
+        return self.commander.vel - self.vel
+
+    # Relative error dotted with the desired direction
+    # def relative_pos_error_dotted(self):
+    #     current_direction = np.array([np.cos(self.heading), np.sin(self.heading)])
+    #     relative_error = (self.target_rel_pos - self.pos + self.commander.pos)
+    #     return np.dot(relative_error, current_direction)
+
+    # # Relative velocity error dotted with the desired direction
+    # def relative_vel_error_dotted(self):
+    #     current_direction = np.array([np.cos(self.heading), np.sin(self.heading)])
+    #     relative_error = self.commander.vel - self.vel
+    #     return np.dot(relative_error, current_direction)
+
     # Calculate the forces using PID control
     def force_pid(self):
-        P_vel = 20.
-        D_vel = 8.
-        P_rot = 50.
-        D_rot = 20.
-        F = P_vel * self.relative_pos_error_dotted() + D_vel * self.relative_vel_error_dotted()
+        P_rot = 40.
+        D_rot = 10.
         tau = P_rot * self.relative_heading_error() + D_rot * self.relative_heading_dot_error()
+        P_vel = .3
+        D_vel = .1
+        F = P_vel * self.relative_error()# + D_vel * self.relative_velocity()
+        # F = P_vel * self.relative_pos_error_dotted() + D_vel * self.relative_vel_error_dotted()
         return F, tau
 
     # Follow the commander
