@@ -1,6 +1,6 @@
 '''
 THE PURPOSE OF THIS FILE WILL BE TO USE RANGE ONLY LOCALIZATION TO CREATE A MAP
-OF THE COMMANDER AGENT AND ITS FOLLOWERS.
+OF THE COMMANDER AGENT AND ITS FOLLOWERS AND ESTIMATE THE LOCATION OF THE COMMANDER.
 '''
 
 import numpy as np
@@ -22,7 +22,6 @@ tf = 15
 n = int(tf / dt)
 
 range_matrix = np.zeros((n_agents, n_agents))
-# range_matrix[:, 0] += 1
 range_matrix[0, :] += 1
 
 estimates = np.array([[]])
@@ -36,7 +35,6 @@ for frame in range(n):
         for follower in al.followers:
             donut = Donut(follower.range_to_agent(al), .05, follower.pos[0], follower.pos[1], num_points=10000)
             donuts.append(donut)
-        # md = MultiDonut(donuts, .1, .1)
         md = MultiDonut(donuts, .02, .02)
         x_est, y_est, z_est = md.get_max_loc()
         estimates = np.array([[x_est, y_est]])
