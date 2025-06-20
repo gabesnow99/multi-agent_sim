@@ -6,7 +6,7 @@ OF THE COMMANDER AGENT AND ITS FOLLOWERS AND ESTIMATE THE LOCATION OF THE COMMAN
 import numpy as np
 
 from agents.point_agents import *
-from agent_plotting import *
+from plotting.agent_plotting import *
 
 from probability_visualization.probability_representations import Donut, MultiDonut
 

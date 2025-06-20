@@ -1,5 +1,5 @@
 from agents.unicycle_agents import *
-from agent_plotting import *
+from plotting.agent_plotting import *
 
 bea = UnicycleCommander(init_vel=0.001, init_heading=np.pi/4., init_heading_dot=0.)
 bea.generate_circle_of_followers(8, r=0.)

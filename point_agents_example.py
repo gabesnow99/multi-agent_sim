@@ -1,5 +1,5 @@
 from agents.point_agents import *
-from agent_plotting import *
+from plotting.agent_plotting import *
 
 al = PointCommander()
 al.generate_circle_of_followers(10)
