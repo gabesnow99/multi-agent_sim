@@ -10,26 +10,32 @@ from agent_plotting import *
 
 from probability_visualization.probability_representations import Donut, MultiDonut
 
+# Create the commander and followers
 al = PointCommander()
 al.create_follower([1, 1.5, 0])
 al.create_follower([.8, -1.2, 0])
 al.create_follower([-1.3, -.3, 0])
-# al.create_follower([-.9, .7, 0])
 n_agents = 1 + len(al.followers)
 
 dt = .01
 tf = 15
 n = int(tf / dt)
 
+# Create matrix for the sake of plotting range circles
 range_matrix = np.zeros((n_agents, n_agents))
 range_matrix[0, :] += 1
 
+# Initialize estimates
 estimates = np.array([[]])
+
+# Iterate over time
 for frame in range(n):
 
-    img = al.meander_lead(dt)
+    # Plot and move commander
     cv_plot_commander_and_followers(al, dt, range_rings_indices=range_matrix, estimate=estimates)
+    al.meander_lead(dt)
 
+    # Estimate the location of the commander
     if frame % 2 == 0:
         donuts = []
         for follower in al.followers:
