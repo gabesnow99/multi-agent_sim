@@ -33,6 +33,14 @@ class PointAgent:
         self.vel[1] += random.uniform(-max, max)
         self.propagate(dt)
 
+    # When passed another PointAgent, calculates exact distance
+    def range_to_agent(self, agent):
+        return np.linalg.norm(self.pos - agent.pos)
+
+    # When passed another PointAgent, calculates exact bearing to that agent
+    def bearing_to_agent(self, agent):
+        return np.arctan2(agent.pos[1] - self.pos[1], agent.pos[0] - self.pos[0])
+
 # Commander agent
 class PointCommander(PointAgent):
 
@@ -41,15 +49,15 @@ class PointCommander(PointAgent):
         self.followers = []
 
     # Used to generate a follower agent
-    def create_follower(self, rel_pos):
-        self.followers.append(PointFollower(commander=self, rel_pos=rel_pos))
+    def create_follower(self, rel_pos, follower_id=None):
+        self.followers.append(PointFollower(commander=self, rel_pos=rel_pos, follower_id=follower_id))
 
     # Generates n followers cluster in a circle of radius r about the commander
     def generate_circle_of_followers(self, n=4, r=1.):
         n = int(n)
         for ii in range(n):
             th = 2 * np.pi * ii / n
-            self.create_follower(r * np.array([np.cos(th), np.sin(th), 0.]))
+            self.create_follower(r * np.array([np.cos(th), np.sin(th), 0.]), follower_id=ii+1)
 
     # Marches the commander as well as all followers
     def forward_march(self, dt, F=[0., 0., 0.]):
@@ -66,12 +74,13 @@ class PointCommander(PointAgent):
 # Follower agent
 class PointFollower(PointAgent):
 
-    def __init__(self, commander, rel_pos, P=15., I=0., D=3., init_vel=[0., 0., 0.], mass=1.):
+    def __init__(self, commander, rel_pos, P=15., I=0., D=3., init_vel=[0., 0., 0.], mass=1., follower_id=None):
         # Initialize
         self.commander = commander
         self.target_rel_pos = np.array(rel_pos).flatten()
         init_pos = self.commander.pos + self.target_rel_pos
         super().__init__(init_pos, init_vel, mass)
+        self.follower_id = follower_id
         # Control relative to commander
         self.P = P
         self.I = I
