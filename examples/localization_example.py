@@ -27,7 +27,7 @@ n = int(tf / dt)
 
 # Create matrix for the sake of plotting range circles
 range_matrix = np.zeros((n_agents, n_agents))
-range_matrix[0, :] += 1
+# range_matrix[0:2, :] += 1
 
 # Initialize estimates
 estimates = np.array([[]])
@@ -40,11 +40,30 @@ for frame in range(n):
     al.meander_lead(dt)
 
     # Estimate the location of the commander
-    if frame % 2 == 0:
+    if frame % 10 == 0:
+
+        estimates = []
+
+        # Estimate commander location
         donuts = []
         for follower in al.followers:
             donut = Donut(follower.range_to_agent(al), .05, follower.pos[0], follower.pos[1], num_points=10000)
             donuts.append(donut)
         md = MultiDonut(donuts, .02, .02)
         x_est, y_est, z_est = md.get_max_loc()
-        estimates = np.array([[x_est, y_est]])
+        estimates.append([x_est, y_est])
+
+        # Estimate follower locations
+        for ii, agent_to_estimate in enumerate(al.followers):
+            donuts = []
+            donut = Donut(al.range_to_agent(agent_to_estimate), .05, al.pos[0], al.pos[1], num_points=10000)
+            donuts.append(donut)
+            for jj, follower in enumerate(al.followers):
+                if jj != ii:
+                    donut = Donut(follower.range_to_agent(agent_to_estimate), .05, follower.pos[0], follower.pos[1], num_points=10000)
+                    donuts.append(donut)
+            md = MultiDonut(donuts, .02, .02)
+            x_est, y_est, z_est = md.get_max_loc()
+            estimates.append([x_est, y_est])
+
+        estimates = np.array(estimates)
