@@ -27,7 +27,7 @@ n = int(tf / dt)
 
 # Create matrix for the sake of plotting range circles
 range_matrix = np.zeros((n_agents, n_agents))
-# range_matrix[0:2, :] += 1
+range_matrix[0:1, :] += 1
 
 # Initialize estimates
 estimates = np.array([[]])
@@ -36,7 +36,7 @@ estimates = np.array([[]])
 for frame in range(n):
 
     # Plot and move commander
-    cv_plot_commander_and_followers(al, dt, range_rings_indices=range_matrix, estimate=estimates)
+    cv_plot_commander_and_followers(al, dt, range_rings_indices=range_matrix, estimate=estimates, draw_target_loc=True)
     al.meander_lead(dt)
 
     # Estimate the location of the commander
@@ -45,25 +45,17 @@ for frame in range(n):
         estimates = []
 
         # Estimate commander location
-        donuts = []
-        for follower in al.followers:
-            donut = Donut(follower.range_to_agent(al), .05, follower.pos[0], follower.pos[1], num_points=10000)
-            donuts.append(donut)
-        md = MultiDonut(donuts, .02, .02)
-        x_est, y_est, z_est = md.get_max_loc()
+        x_est, y_est = al.localize_using_donuts(al.followers)
         estimates.append([x_est, y_est])
 
         # Estimate follower locations
         for ii, agent_to_estimate in enumerate(al.followers):
-            donuts = []
-            donut = Donut(al.range_to_agent(agent_to_estimate), .05, al.pos[0], al.pos[1], num_points=10000)
-            donuts.append(donut)
+            to_range = []
+            to_range.append(al)
             for jj, follower in enumerate(al.followers):
                 if jj != ii:
-                    donut = Donut(follower.range_to_agent(agent_to_estimate), .05, follower.pos[0], follower.pos[1], num_points=10000)
-                    donuts.append(donut)
-            md = MultiDonut(donuts, .02, .02)
-            x_est, y_est, z_est = md.get_max_loc()
+                    to_range.append(follower)
+            x_est, y_est = agent_to_estimate.localize_using_donuts(to_range)
             estimates.append([x_est, y_est])
 
         estimates = np.array(estimates)

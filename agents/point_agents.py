@@ -1,6 +1,9 @@
 import numpy as np
 import random
 
+from probability_visualization.probability_representations import Donut, MultiDonut
+
+
 # Super class of point agents
 class PointAgent:
 
@@ -13,6 +16,7 @@ class PointAgent:
         self.pos = np.array(init_pos).flatten()
         self.vel = np.array(init_vel).flatten()
         self.mass = mass
+        self.estimated_pos = np.copy(self.pos)
 
     # Manually set the state
     def set_state(self, pos=None, vel=None):
@@ -40,6 +44,30 @@ class PointAgent:
     # When passed another PointAgent, calculates exact bearing to that agent
     def bearing_to_agent(self, agent):
         return np.arctan2(agent.pos[1] - self.pos[1], agent.pos[0] - self.pos[0])
+
+    # Localize using at least 3 range measurements to other agents
+    def localize_using_donuts(self, agents, num_points=10000):
+
+        if not isinstance(agents, list):
+            print("Agents must be a list of Point Agents.")
+            return
+        if len(agents) < 3:
+            print("At least 3 agents are required.")
+            return
+
+        stdev = .05
+        dx, dy = .02, .02
+
+        donuts = []
+        for agent in agents:
+            donut = Donut(self.range_to_agent(agent), stdev, agent.pos[0], agent.pos[1], num_points=num_points)
+            donuts.append(donut)
+        md = MultiDonut(donuts, dx, dy)
+        x_est, y_est, loc_prob = md.get_max_loc()
+        self.estimated_pos = np.array([x_est, y_est, 0.])
+
+        return x_est, y_est
+
 
 # Commander agent
 class PointCommander(PointAgent):
@@ -70,6 +98,7 @@ class PointCommander(PointAgent):
         self.meander(dt, rand_max)
         for agent in self.followers:
             agent.fall_in(dt)
+
 
 # Follower agent
 class PointFollower(PointAgent):
