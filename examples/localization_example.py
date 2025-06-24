@@ -40,12 +40,12 @@ for frame in range(n):
     al.meander_lead(dt)
 
     # Estimate the location of the commander
-    if frame % 10 == 0:
+    if frame % 5 == 0:
 
         estimates = []
 
         # Estimate commander location
-        x_est, y_est = al.localize_using_donuts(al.followers)
+        x_est, y_est = al.localize_using_donuts(al.followers, num_points=3000)
         estimates.append([x_est, y_est])
 
         # Estimate follower locations
@@ -55,7 +55,7 @@ for frame in range(n):
             for jj, follower in enumerate(al.followers):
                 if jj != ii:
                     to_range.append(follower)
-            x_est, y_est = agent_to_estimate.localize_using_donuts(to_range)
+            x_est, y_est = agent_to_estimate.localize_using_donuts(to_range, num_points=3000)
             estimates.append([x_est, y_est])
 
         estimates = np.array(estimates)

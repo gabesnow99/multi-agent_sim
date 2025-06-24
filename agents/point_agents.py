@@ -41,6 +41,10 @@ class PointAgent:
     def range_to_agent(self, agent):
         return np.linalg.norm(self.pos - agent.pos)
 
+    # When passed another PointAgent, return simulated range measurement
+    def get_range_measurement(self, agent, stdev=.1):
+        return self.range_to_agent(agent) + np.random.normal(loc=0, scale=stdev)
+
     # When passed another PointAgent, calculates exact bearing to that agent
     def bearing_to_agent(self, agent):
         return np.arctan2(agent.pos[1] - self.pos[1], agent.pos[0] - self.pos[0])
@@ -118,7 +122,8 @@ class PointFollower(PointAgent):
         self.integrator = 0.
 
     def distance_to_leader(self):
-        return self.pos - self.commander.pos
+        # return self.pos - self.commander.pos
+        return self.estimated_pos - self.commander.estimated_pos
 
     def relative_error(self):
         return self.target_rel_pos - self.distance_to_leader()
