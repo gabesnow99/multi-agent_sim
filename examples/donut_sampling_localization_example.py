@@ -1,5 +1,5 @@
 '''
-THE PURPOSE OF THIS FILE WILL BE TO USE RANGE ONLY LOCALIZATION TO CREATE A MAP
+THE PURPOSE OF THIS FILE IS USING DONUT SAMPLING LOCALIZATION TO CREATE A MAP
 OF THE COMMANDER AGENT AND ITS FOLLOWERS AND ESTIMATE THE LOCATION OF THE COMMANDER.
 '''
 
@@ -11,8 +11,6 @@ import numpy as np
 
 from agents.point_agents import *
 from plotting.agent_plotting import *
-
-from probability_visualization.probability_representations import Donut, MultiDonut
 
 # Create the commander and followers
 al = PointCommander()
@@ -40,12 +38,12 @@ for frame in range(n):
     al.meander_lead(dt)
 
     # Estimate the location of the commander
-    if frame % 5 == 0:
+    if frame % 1 == 0:
 
         estimates = []
 
         # Estimate commander location
-        x_est, y_est = al.localize_using_donuts(al.followers, num_points=3000)
+        x_est, y_est = al.localize_donut_sampling(al.followers, dt, num_points=5000)
         estimates.append([x_est, y_est])
 
         # Estimate follower locations
@@ -55,7 +53,7 @@ for frame in range(n):
             for jj, follower in enumerate(al.followers):
                 if jj != ii:
                     to_range.append(follower)
-            x_est, y_est = agent_to_estimate.localize_using_donuts(to_range, num_points=3000)
+            x_est, y_est = agent_to_estimate.localize_donut_sampling(to_range, dt, num_points=5000)
             estimates.append([x_est, y_est])
 
         estimates = np.array(estimates)

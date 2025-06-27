@@ -16,7 +16,17 @@ class PointAgent:
         self.pos = np.array(init_pos).flatten()
         self.vel = np.array(init_vel).flatten()
         self.mass = mass
+        # Used in range sensing and control
+        self.estimated_pos = np.array([0, 0, 0])
+        self.previous_estimated_pos = np.array([0, 0, 0])
+        self.estimated_vel = np.array([0, 0, 0])
+        # Used in particle filter localization
+        self.particles = np.array([[]])
+        # For debugging, otherwise comment out
         self.estimated_pos = np.copy(self.pos)
+        self.estimated_vel = np.copy(self.vel)
+
+    #################################### TRUE STATE MANIPULATION ####################################
 
     # Manually set the state
     def set_state(self, pos=None, vel=None):
@@ -37,6 +47,8 @@ class PointAgent:
         self.vel[1] += random.uniform(-max, max)
         self.propagate(dt)
 
+    ############################################ SENSING ############################################
+
     # When passed another PointAgent, calculates exact distance
     def range_to_agent(self, agent):
         return np.linalg.norm(self.pos - agent.pos)
@@ -49,8 +61,10 @@ class PointAgent:
     def bearing_to_agent(self, agent):
         return np.arctan2(agent.pos[1] - self.pos[1], agent.pos[0] - self.pos[0])
 
+    ################################## DONUT SAMPLING LOCALIZATION ##################################
+
     # Localize using at least 3 range measurements to other agents
-    def localize_using_donuts(self, agents, num_points=10000):
+    def localize_donut_sampling(self, agents, dt, num_points=10000):
 
         if not isinstance(agents, list):
             print("Agents must be a list of Point Agents.")
@@ -64,13 +78,71 @@ class PointAgent:
 
         donuts = []
         for agent in agents:
-            donut = Donut(self.range_to_agent(agent), stdev, agent.pos[0], agent.pos[1], num_points=num_points)
+            donut = Donut(self.get_range_measurement(agent, stdev), stdev, agent.pos[0], agent.pos[1], num_points=num_points)
             donuts.append(donut)
         md = MultiDonut(donuts, dx, dy)
         x_est, y_est, loc_prob = md.get_max_loc()
+        self.previous_estimated_pos = self.estimated_pos
+
         self.estimated_pos = np.array([x_est, y_est, 0.])
+        self.update_estimated_velocity(dt)
 
         return x_est, y_est
+
+    ################################# PARTICLE FILTER LOCALIZATION #################################
+
+    def localize_particle_filter(self, agents, dt, num_particles=1000, particle_grid=False):
+
+        if not isinstance(agents, list):
+            print("Agents must be a list of Point Agents.")
+            return
+
+        stdev = .05
+        ranges = np.array([self.get_range_measurement(agent) for agent in agents])
+
+        if len(self.particles[0]) < 2:
+            span = np.sum(ranges)
+            x_min = self.estimated_pos[0] - span
+            x_max = self.estimated_pos[0] + span
+            y_min = self.estimated_pos[1] - span
+            y_max = self.estimated_pos[1] + span
+            self.generate_new_particles(num_particles, x_min, x_max, y_min, y_max)
+
+        # Calculate the cost of each particle
+        costs = []
+        for particle in self.particles:
+            dists = np.array([self.dist_point_to_agent(particle, agent) for agent in agents])
+            # TODO: CHANGE TO MAHALANOBIS DISTANCE
+            errs = np.abs(ranges - dists)
+            c = np.prod(errs) + np.sum(errs)
+            costs.append(c)
+        costs = np.array(costs)
+
+        min_index = np.argmin(costs)
+        x_est, y_est = self.particles[min_index, :2]
+
+        return x_est, y_est
+
+    def generate_new_particles(self, n_particles, x_min, x_max, y_min, y_max):
+        x = np.random.uniform(x_min, x_max, n_particles)
+        y = np.random.uniform(y_min, y_max, n_particles)
+        z = np.zeros(n_particles)
+        self.particles = np.column_stack((x, y, z))
+
+    def dist_point_to_agent(self, point, agent, use_estimated_pos=True):
+        point = np.array(point).flatten()
+        if use_estimated_pos:
+            return np.linalg.norm(point - agent.estimated_pos)
+        else:
+            return np.linalg.norm(point - agent.pos)
+
+
+    ###################################### GENERAL ESTIMATION ######################################
+
+    def update_estimated_velocity(self, dt):
+        self.estimated_vel = (self.estimated_pos - self.previous_estimated_pos) / dt
+
+    ################################################################################################
 
 
 # Commander agent
@@ -122,19 +194,27 @@ class PointFollower(PointAgent):
         self.integrator = 0.
 
     def distance_to_leader(self):
-        # return self.pos - self.commander.pos
+        return self.pos - self.commander.pos
+
+    def estimated_distance_to_leader(self):
         return self.estimated_pos - self.commander.estimated_pos
 
     def relative_error(self):
         return self.target_rel_pos - self.distance_to_leader()
 
+    def estimated_relative_error(self):
+        return self.target_rel_pos - self.estimated_distance_to_leader()
+
     def relative_vel_error(self):
         return self.commander.vel - self.vel
 
+    def estimated_relative_vel_error(self):
+        return self.commander.estimated_vel - self.estimated_vel
+
     # Calculate the force using PID control
     def force_pid(self):
-        err = self.relative_error()
-        vel_err = self.relative_vel_error()
+        err = self.estimated_relative_error()
+        vel_err = self.estimated_relative_vel_error()
         self.integrator += err
         F = self.P * err + self.I * self.integrator + self.D * vel_err
         return F

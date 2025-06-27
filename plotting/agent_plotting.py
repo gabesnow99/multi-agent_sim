@@ -27,8 +27,8 @@ def pos_to_pixels(x, y):
 def range_to_pixels(r):
     return int(pixels_per_meter * r)
 
-def add_point(img, x, y):
-    cv2.circle(img, pos_to_pixels(x, y), 4, green, -1)
+def add_point(img, x, y, point_size=4, color=green):
+    cv2.circle(img, pos_to_pixels(x, y), point_size, color, -1)
 
 def cv_plot_unicycle_commander_and_followers(commander, dt):
 
@@ -56,7 +56,7 @@ def cv_plot_unicycle_commander_and_followers(commander, dt):
     if cv2.waitKey(int(1000 * dt)) & 0xFF == ord('q'):
         quit()
 
-def cv_plot_commander_and_followers(commander, dt, draw_target_loc=False, range_rings_indices=np.array([[]]), estimate=np.array([[]])):
+def cv_plot_commander_and_followers(commander, dt, draw_target_loc=False, range_rings_indices=np.array([[]]), estimate=np.array([[]]), particles=np.array([[]])):
 
     width, height = int(pixels_per_meter * (x_max - x_min)), int(pixels_per_meter * (y_max - y_min))
     img = np.full((height, width, 3), 255, dtype=np.uint8)
@@ -95,6 +95,11 @@ def cv_plot_commander_and_followers(commander, dt, draw_target_loc=False, range_
     if len(estimate[0]) == 2:
         for p in estimate:
             add_point(img, p[0], p[1])
+
+    # Plot the estimate of the
+    if isinstance(particles, np.ndarray) and len(particles[0]) >= 2:
+        for p in particles:
+            add_point(img, p[0], p[1], point_size=2)
 
     # Show and allow quitting
     cv2.imshow('Agents', img)
