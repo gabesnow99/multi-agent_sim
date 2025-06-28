@@ -30,7 +30,8 @@ for frame in range(n):
 
     # Plot and move commander
     cv_plot_commander_and_followers(al, dt, range_rings_indices=range_matrix, estimate=estimates, particles=al.particles)
-    al.meander_lead(dt)
+    # al.meander_lead(dt)
+    al.forward_march(dt)
 
     # Estimate the location of the commander
     if frame % 1 == 0:
@@ -38,7 +39,7 @@ for frame in range(n):
         estimates = []
 
         # Estimate commander location
-        x_est, y_est = al.localize_particle_filter(al.followers, dt, num_particles=10)
+        x_est, y_est = al.localize_particle_filter(al.followers, dt, num_particles=1000)
         estimates.append([x_est, y_est])
 
         estimates = np.array(estimates)

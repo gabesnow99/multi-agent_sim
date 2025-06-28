@@ -81,9 +81,9 @@ class PointAgent:
             donut = Donut(self.get_range_measurement(agent, stdev), stdev, agent.pos[0], agent.pos[1], num_points=num_points)
             donuts.append(donut)
         md = MultiDonut(donuts, dx, dy)
-        x_est, y_est, loc_prob = md.get_max_loc()
-        self.previous_estimated_pos = self.estimated_pos
+        x_est, y_est, pos_prob = md.get_max_loc()
 
+        self.previous_estimated_pos = self.estimated_pos
         self.estimated_pos = np.array([x_est, y_est, 0.])
         self.update_estimated_velocity(dt)
 
@@ -98,9 +98,12 @@ class PointAgent:
             return
 
         stdev = .05
+        lamagia = .01
         ranges = np.array([self.get_range_measurement(agent) for agent in agents])
 
+        # When starting with a fresh set of particles
         if len(self.particles[0]) < 2:
+            # Calculate approximate useful region
             span = np.sum(ranges)
             x_min = self.estimated_pos[0] - span
             x_max = self.estimated_pos[0] + span
@@ -114,21 +117,37 @@ class PointAgent:
             dists = np.array([self.dist_point_to_agent(particle, agent) for agent in agents])
             # TODO: CHANGE TO MAHALANOBIS DISTANCE
             errs = np.abs(ranges - dists)
-            c = np.prod(errs) + np.sum(errs)
+            c = np.prod(errs) + np.sum(errs) * lamagia
             costs.append(c)
         costs = np.array(costs)
 
         min_index = np.argmin(costs)
         x_est, y_est = self.particles[min_index, :2]
 
+        # TODO: GOOD RESAMPLING
+        best_particle = np.copy(self.particles[min_index, :]).flatten()
+        np.random.shuffle(self.particles)
+        twenty_index = int(.2 * len(self.particles))
+        self.particles[:twenty_index, :] *= 0
+        self.particles[:twenty_index, :] += best_particle
+
+        self.chaosify_particles(.05)
+
+        self.previous_estimated_pos = self.estimated_pos
+        self.estimated_pos = np.array([x_est, y_est, 0.])
+        self.update_estimated_velocity(dt)
+
         return x_est, y_est
 
+    # Used to uniformly generate 2D particles within x and y bounds
     def generate_new_particles(self, n_particles, x_min, x_max, y_min, y_max):
         x = np.random.uniform(x_min, x_max, n_particles)
         y = np.random.uniform(y_min, y_max, n_particles)
         z = np.zeros(n_particles)
         self.particles = np.column_stack((x, y, z))
+        return
 
+    # Returns to the distance from the given point to the given agent
     def dist_point_to_agent(self, point, agent, use_estimated_pos=True):
         point = np.array(point).flatten()
         if use_estimated_pos:
@@ -136,6 +155,19 @@ class PointAgent:
         else:
             return np.linalg.norm(point - agent.pos)
 
+    # Move the particles with the estimated velocity of the agent
+    def propagate_particles(self, dt):
+        self.particles += self.estimated_vel * dt
+        return
+
+    # Used to spread out the particles after duplicates have been created
+    def chaosify_particles(self, stdev=.5):
+        n_particles = np.shape(self.particles)[0]
+        chaos_x = np.random.normal(0., stdev, n_particles)
+        chaos_y = np.random.normal(0., stdev, n_particles)
+        chaos = np.column_stack((chaos_x, chaos_y))
+        self.particles[:, :2] += chaos
+        return
 
     ###################################### GENERAL ESTIMATION ######################################
 
