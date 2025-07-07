@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from scipy.optimize import differential_evolution
 
 from probability_visualization.probability_representations import Donut, MultiDonut
 
@@ -38,8 +39,12 @@ class PointAgent:
     # Move forward a timestep
     def propagate(self, dt, F=[0., 0., 0.]):
         F = np.array(F).flatten()
+        # Propagate pos and vel
         self.vel += dt * F / self.mass
         self.pos += dt * self.vel
+        # Propagate estimated pos
+        self.estimated_vel += dt * F / self.mass
+        self.estimated_pos += dt * self.vel
 
     # Add a random amount to the velocity
     def meander(self, dt, max=.1):
@@ -78,7 +83,7 @@ class PointAgent:
 
         donuts = []
         for agent in agents:
-            donut = Donut(self.get_range_measurement(agent, stdev), stdev, agent.pos[0], agent.pos[1], num_points=num_points)
+            donut = Donut(self.get_range_measurement(agent, stdev), stdev, agent.estimated_pos[0], agent.estimated_pos[1], num_points=num_points)
             donuts.append(donut)
         md = MultiDonut(donuts, dx, dy)
         x_est, y_est, pos_prob = md.get_max_loc()
@@ -99,7 +104,7 @@ class PointAgent:
 
         stdev = .05
         lamagia = .01
-        ranges = np.array([self.get_range_measurement(agent) for agent in agents])
+        ranges = np.array([self.get_range_measurement(agent, stdev=stdev) for agent in agents])
 
         # When starting with a fresh set of particles
         if len(self.particles[0]) < 2:
@@ -168,6 +173,42 @@ class PointAgent:
         chaos = np.column_stack((chaos_x, chaos_y))
         self.particles[:, :2] += chaos
         return
+
+    ######################################### OPTIMIZATION #########################################
+
+    def optimized_localization(self, agents, dt):
+
+        if not isinstance(agents, list):
+            print("Agents must be a list of Point Agents.")
+            return
+        if len(agents) < 3:
+            print("At least 3 agents are required.")
+            return
+
+        stdev = .05
+
+        range_measurements = np.array([self.get_range_measurement(agent, stdev=stdev) for agent in agents])
+        agents_locations = np.array([agent.estimated_pos[:2] for agent in agents])
+        args = [range_measurements, agents_locations]
+
+        span = np.sum(range_measurements)
+        x_min = self.estimated_pos[0] - span
+        x_max = self.estimated_pos[0] + span
+        y_min = self.estimated_pos[1] - span
+        y_max = self.estimated_pos[1] + span
+        bounds = [(x_min, x_max), (y_min, y_max)]
+
+        x_est, y_est = differential_evolution(self.sum_squared_cost, bounds, args=args).x
+        self.estimated_pos = np.array([x_est, y_est, 0.])
+        self.update_estimated_velocity(dt)
+
+        return x_est, y_est
+
+    def sum_squared_cost(self, xy, ranges, circles):
+        dists = np.array([np.linalg.norm(np.array(circ) - np.array(xy)) for circ in circles])
+        errs = np.abs(ranges - dists)
+        cost = np.dot(errs, errs)
+        return cost
 
     ###################################### GENERAL ESTIMATION ######################################
 
@@ -253,5 +294,6 @@ class PointFollower(PointAgent):
 
     # Follow the commander
     def fall_in(self, dt):
+        return
         F = self.force_pid()
         self.propagate(dt, F)
